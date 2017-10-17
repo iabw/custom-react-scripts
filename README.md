@@ -1,3 +1,59 @@
+# Custom custom-react-scripts
+
+### ⚠️ Warning ⚠️
+
+This is not a real release. If you found this repo on npm, **please do not depend on it**.
+
+If you're sure this is something you want to be doing (it probably isn't!), reference the most recent commit on master and create your own fork.
+
+### References
+
+- CRA README - https://github.com/mattphillips/create-react-app/blob/1270b587196b9fcb74db20fb472029df39be30cb/packages/react-scripts/template/README.md
+- Introduction to Custom React Scripts - https://medium.com/@kitze/configure-create-react-app-without-ejecting-d8450e96196a
+- Extending CRA - https://medium.com/@shubheksha/tweaking-configuration-for-react-scripts-in-create-react-app-d91e9d03a42f
+- Another 'extending CRA' overview - https://medium.com/@denis.zhbankov/maintaining-a-fork-of-create-react-app-as-an-alternative-to-ejecting-c555e8eb2b63
+- Overview of extending CRA's webpack config without ejecting or forking - https://medium.com/@viankakrisna/extending-create-react-app-webpack-config-c70828593c96
+- Large example of the above behavior - https://gist.github.com/dthpth/d13f190ad03c1075dd3e300f04e8da73
+- Master ticket in CRA where such issues have been getting discussed - https://github.com/facebookincubator/create-react-app/issues/682
+
+### Managing a Top-level Webpack Config
+
+You're going to need a top-level webpack that will extend custom-react-scripts's webpack configs.
+
+Here's an example that will allow importing files from outside src
+
+```
+const webpack = require("webpack");
+const path = require("path");
+
+const devMode = process.env.DEV_MODE || false;
+
+const reactScriptsConfig = require(`custom-react-scripts/config/webpack.config.${devMode ? 'dev' : 'prod'}`);
+
+// Folder needs to be inserted as both a Babel target and a resolve alias
+const notInSrc = path.resolve( __dirname + "/notInSrc" );
+
+// Look at this **AMAZING** hack to find the Babel module
+// This is by far the grossest part of this whole process.
+const babelModuleRule = reactScriptsConfig.module.rules[1].oneOf.find(function(rule){
+    return rule.options && rule.options.babelrc !== undefined;
+});
+
+// The Babel module's include is sometimes only a string, so we concat off of notInSrc
+babelModuleRule.include = [notInSrc].concat(babelModuleRule.include);
+
+// Actually extending the CRA webpack config
+module.exports = Object.assign({}, reactScriptsConfig, {
+    resolve: Object.assign({}, reactScriptsConfig.resolve, {
+        alias: Object.assign({}, reactScriptsConfig.resolve.alias, {
+            notInSrc: notInSrc
+        }),
+        // Over-riding ModuleScopePlugin that doesn't let us import modules from outside src
+        plugins: [],
+    }),
+});
+```
+
 # ☢ custom-react-scripts ☢
 Latest version of original react-scripts: **1.0.11**
 
